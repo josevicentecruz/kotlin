@@ -12,7 +12,7 @@ open class IncrementalFileToPathConverter(val rootProjectDir: File?) : FileToPat
     private val projectDirPath = rootProjectDir?.absolutePath/*.let { normalize(it)}*/
 
     override fun toPath(file: File): String {
-        val path = file.absolutePath
+        val path = file.normalize().absolutePath
         return when {
             projectDirPath == null || !path.startsWith(projectDirPath) -> path
             else -> PROJECT_DIR_PLACEHOLDER + path.substring(projectDirPath.length)
@@ -21,12 +21,13 @@ open class IncrementalFileToPathConverter(val rootProjectDir: File?) : FileToPat
 
     override fun toFile(path: String): File =
         when {
-            path.startsWith(PROJECT_DIR_PLACEHOLDER) -> rootProjectDir!!.resolve(path.substring(PROJECT_DIR_PLACEHOLDER.length))
+            path.startsWith(PROJECT_DIR_PLACEHOLDER) -> rootProjectDir!!.resolve(path.substring(PATH_PREFIX.length))
             else -> File(path)
         }
 
     private companion object {
         private const val PROJECT_DIR_PLACEHOLDER = "${'$'}PROJECT_DIR$"
+        private const val PATH_PREFIX = "$PROJECT_DIR_PLACEHOLDER/"
 
     }
 
