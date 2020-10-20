@@ -9,19 +9,22 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor
 import org.jetbrains.kotlin.diagnostics.DiagnosticSink
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
-import org.jetbrains.kotlin.resolve.BindingContext
-import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
-import org.jetbrains.kotlin.resolve.DescriptorUtils
+import org.jetbrains.kotlin.resolve.*
 import org.jetbrains.kotlin.resolve.bindingContextUtil.isUsedAsExpression
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
+import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.multiplatform.ExpectedActualResolver
+import org.jetbrains.kotlin.resolve.scopes.receivers.ExpressionReceiver
+import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
 import org.jetbrains.kotlin.util.getExceptionMessage
 import org.jetbrains.kotlin.util.getNonPrivateTraitMembersForDelegation
 import org.jetbrains.kotlin.utils.DFS
@@ -241,4 +244,34 @@ object CodegenUtil {
             exception
         )
     }
+
+    // We need to unbox lambda parameter inline class if the compiler does not generate bridge for invoke.
+    // It does it if underlying type of inline class is Any or Any?
+    // Return original inline class type.
+    @JvmStatic
+    fun ResolvedCall<*>?.receiverTypeIfItIsInlineClassWithAnyUnderlyingTypeAndIsLambdaParameter(bindingContext: BindingContext): KotlinType? {
+        this?.extensionReceiver?.let {
+            if (it.type.isInlineClassWithUnderlyingTypeAny() && it.isLambdaValueParameter(bindingContext)) return it.type
+        }
+        this?.dispatchReceiver?.let {
+            if (it.type.isInlineClassWithUnderlyingTypeAny() && it.isLambdaValueParameter(bindingContext)) return it.type
+        }
+        return null
+    }
+
+    @JvmStatic
+    fun KotlinType.isInlineClassWithUnderlyingTypeAny(): Boolean {
+        if (!isInlineClassType()) return false
+        val classDescriptor = constructor.declarationDescriptor as? ClassDescriptor ?: return false
+        return classDescriptor.underlyingRepresentation()?.type?.isAnyOrNullableAny() == true
+    }
+
+    private fun ReceiverValue.isLambdaValueParameter(bindingContext: BindingContext): Boolean {
+        if (this !is ExpressionReceiver) return false
+        val descriptor = expression.getResolvedCall(bindingContext)?.resultingDescriptor ?: return false
+        if (descriptor !is ValueParameterDescriptor) return false
+        return descriptor.containingDeclaration is AnonymousFunctionDescriptor
+    }
+
+    private fun ReceiverValue.hasTypeArguments(): Boolean = type.arguments.isNotEmpty()
 }

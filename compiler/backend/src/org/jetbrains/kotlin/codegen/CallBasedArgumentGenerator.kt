@@ -5,9 +5,13 @@
 
 package org.jetbrains.kotlin.codegen
 
+import org.jetbrains.kotlin.backend.common.CodegenUtil.isInlineClassWithUnderlyingTypeAny
+import org.jetbrains.kotlin.codegen.inline.InlineCodegen
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
+import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor
+import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.DefaultValueArgument
 import org.jetbrains.kotlin.resolve.calls.model.ExpressionValueArgument
 import org.jetbrains.kotlin.resolve.calls.model.VarargValueArgument
@@ -45,6 +49,15 @@ class CallBasedArgumentGenerator(
             if (isVarargInvoke) JvmKotlinType(OBJECT_TYPE) else getJvmKotlinType(i),
             i
         )
+        val descriptor = argument.valueArgument?.getArgumentExpression().getResolvedCall(codegen.bindingContext)
+            ?.resultingDescriptor ?: return
+        if (descriptor.returnType?.isInlineClassWithUnderlyingTypeAny() == true &&
+            descriptor.containingDeclaration is AnonymousFunctionDescriptor &&
+            // TODO: HACK
+            callGenerator !is InlineCodegen<*>
+        ) {
+            StackValue.unboxInlineClass(OBJECT_TYPE, descriptor.returnType!!, codegen.v)
+        }
     }
 
     override fun generateDefault(i: Int, argument: DefaultValueArgument) {

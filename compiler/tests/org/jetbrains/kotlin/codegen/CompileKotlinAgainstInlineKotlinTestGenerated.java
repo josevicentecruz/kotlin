@@ -1950,6 +1950,39 @@ public class CompileKotlinAgainstInlineKotlinTestGenerated extends AbstractCompi
         public void testWithReturnTypeManglingVal() throws Exception {
             runTest("compiler/testData/codegen/boxInline/inlineClasses/withReturnTypeManglingVal.kt");
         }
+
+        @TestMetadata("compiler/testData/codegen/boxInline/inlineClasses/unboxLambdaArgument")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class UnboxLambdaArgument extends AbstractCompileKotlinAgainstInlineKotlinTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTestWithCustomIgnoreDirective(this::doTest, TargetBackend.JVM, testDataFilePath, "// IGNORE_BACKEND_MULTI_MODULE: ");
+            }
+
+            public void testAllFilesPresentInUnboxLambdaArgument() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/inlineClasses/unboxLambdaArgument"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("any.kt")
+            public void testAny() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/inlineClasses/unboxLambdaArgument/any.kt");
+            }
+
+            @TestMetadata("anyN.kt")
+            public void testAnyN() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/inlineClasses/unboxLambdaArgument/anyN.kt");
+            }
+
+            @TestMetadata("primitive.kt")
+            public void testPrimitive() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/inlineClasses/unboxLambdaArgument/primitive.kt");
+            }
+
+            @TestMetadata("string.kt")
+            public void testString() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/inlineClasses/unboxLambdaArgument/string.kt");
+            }
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/boxInline/innerClasses")

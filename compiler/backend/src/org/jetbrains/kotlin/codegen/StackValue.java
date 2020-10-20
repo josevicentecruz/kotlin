@@ -343,9 +343,10 @@ public abstract class StackValue {
     public static UnderlyingValueOfInlineClass underlyingValueOfInlineClass(
             @NotNull Type type,
             @Nullable KotlinType kotlinType,
-            @NotNull StackValue receiver
+            @NotNull StackValue receiver,
+            @Nullable KotlinType inlineClassTypeToUnbox
     ) {
-        return new UnderlyingValueOfInlineClass(type, kotlinType, receiver);
+        return new UnderlyingValueOfInlineClass(type, kotlinType, receiver, inlineClassTypeToUnbox);
     }
 
     @NotNull
@@ -1255,19 +1256,26 @@ public abstract class StackValue {
     }
 
     public static class UnderlyingValueOfInlineClass extends StackValueWithSimpleReceiver {
+        @Nullable
+        final private KotlinType inlineClassTypeToUnbox;
 
         public UnderlyingValueOfInlineClass(
                 @NotNull Type type,
                 @Nullable KotlinType kotlinType,
-                @NotNull StackValue receiver
+                @NotNull StackValue receiver,
+                @Nullable KotlinType inlineClassTypeToUnbox
         ) {
             super(type, kotlinType, false, false, receiver, true);
+            this.inlineClassTypeToUnbox = inlineClassTypeToUnbox;
         }
 
         @Override
         public void putSelector(
                 @NotNull Type type, @Nullable KotlinType kotlinType, @NotNull InstructionAdapter v
         ) {
+            if (inlineClassTypeToUnbox != null) {
+                StackValue.unboxInlineClass(this.type, inlineClassTypeToUnbox, v);
+            }
             coerceTo(type, kotlinType, v);
         }
     }

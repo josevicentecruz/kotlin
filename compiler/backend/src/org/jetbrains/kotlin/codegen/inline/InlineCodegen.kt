@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.codegen.inline
 
 import com.intellij.psi.PsiElement
 import com.intellij.util.ArrayUtil
+import org.jetbrains.kotlin.backend.common.CodegenUtil.isInlineClassWithUnderlyingTypeAny
 import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.isPrimitive
@@ -35,6 +36,7 @@ import org.jetbrains.kotlin.types.TypeSystemCommonBackendContext
 import org.jetbrains.kotlin.types.expressions.ExpressionTypingUtils.isFunctionLiteral
 import org.jetbrains.kotlin.types.expressions.LabelResolver
 import org.jetbrains.kotlin.types.model.TypeParameterMarker
+import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
 import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.Type
@@ -371,7 +373,12 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
         val jvmType = jvmKotlinType.type
         val kotlinType = jvmKotlinType.kotlinType
         if (!isDefaultParameter && shouldPutGeneralValue(jvmType, kotlinType, stackValue)) {
-            stackValue.put(jvmType, kotlinType, codegen.v)
+            // TODO: HACK
+            if (kotlinType?.isAnyOrNullableAny() == true && stackValue.kotlinType?.isInlineClassWithUnderlyingTypeAny() == true) {
+                stackValue.put(jvmType, stackValue.kotlinType, codegen.v)
+            } else {
+                stackValue.put(jvmType, kotlinType, codegen.v)
+            }
         }
 
         if (!asFunctionInline && Type.VOID_TYPE !== jvmType) {

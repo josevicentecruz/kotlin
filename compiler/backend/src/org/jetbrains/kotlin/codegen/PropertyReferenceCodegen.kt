@@ -336,7 +336,7 @@ class PropertyReferenceCodegen(
                         else
                             StackValue.none()
 
-                    StackValue.underlyingValueOfInlineClass(typeMapper.mapType(targetKotlinType), targetKotlinType, receiver)
+                    StackValue.underlyingValueOfInlineClass(typeMapper.mapType(targetKotlinType), targetKotlinType, receiver, null)
                 }
 
                 else -> codegen.intermediateValueForProperty(target as PropertyDescriptor, false, null, StackValue.none())

@@ -12,6 +12,7 @@ import kotlin.Unit;
 import kotlin.collections.CollectionsKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.kotlin.backend.common.CodegenUtil;
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns;
 import org.jetbrains.kotlin.codegen.binding.CalculatedClosure;
 import org.jetbrains.kotlin.codegen.context.ClosureContext;
@@ -31,6 +32,7 @@ import org.jetbrains.kotlin.load.kotlin.header.KotlinClassHeader;
 import org.jetbrains.kotlin.metadata.ProtoBuf;
 import org.jetbrains.kotlin.psi.KtElement;
 import org.jetbrains.kotlin.resolve.DescriptorUtils;
+import org.jetbrains.kotlin.resolve.InlineClassesUtilsKt;
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall;
 import org.jetbrains.kotlin.resolve.descriptorUtil.DescriptorUtilsKt;
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOriginKt;
@@ -366,6 +368,9 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
                 Type type = bridgeParameterTypes[i];
                 value = StackValue.local(slot, type, bridgeParameterKotlinTypes.get(i));
                 slot += type.getSize();
+            }
+            if (CodegenUtil.isInlineClassWithUnderlyingTypeAny(parameterType) && functionReferenceCall == null) {
+                parameterType = InlineClassesUtilsKt.unsubstitutedUnderlyingParameter(parameterType).getType();
             }
             value.put(typeMapper.mapType(calleeParameter), parameterType, iv);
         }

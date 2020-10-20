@@ -1935,7 +1935,13 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
             if (InlineClassesUtilsKt.isUnderlyingPropertyOfInlineClass(propertyDescriptor)) {
                 KotlinType propertyType = propertyDescriptor.getType();
-                return StackValue.underlyingValueOfInlineClass(typeMapper.mapType(propertyType), propertyType, receiver);
+                KotlinType inlineClassTypeToUnbox =
+                        context instanceof InlineLambdaContext
+                        ? null
+                        : CodegenUtil.receiverTypeIfItIsInlineClassWithAnyUnderlyingTypeAndIsLambdaParameter(resolvedCall, bindingContext);
+                return StackValue.underlyingValueOfInlineClass(
+                        typeMapper.mapType(propertyType), propertyType, receiver, inlineClassTypeToUnbox
+                );
             }
 
             Collection<ExpressionCodegenExtension> codegenExtensions = ExpressionCodegenExtension.Companion.getInstances(state.getProject());
@@ -2794,6 +2800,13 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         if (!isConstructor) { // otherwise already
             receiver = StackValue.receiver(resolvedCall, receiver, this, callableMethod);
             receiver.put(receiver.type, receiver.kotlinType, v);
+            KotlinType inlineClassType =
+                    context instanceof InlineLambdaContext
+                    ? null
+                    : CodegenUtil.receiverTypeIfItIsInlineClassWithAnyUnderlyingTypeAndIsLambdaParameter(resolvedCall, bindingContext);
+            if (inlineClassType != null) {
+                StackValue.unboxInlineClass(OBJECT_TYPE, inlineClassType, v);
+            }
 
             // In regular cases we add an inline marker just before receiver is loaded (to spill the stack before a suspension)
             // But in case of safe call things we get the following bytecode:
