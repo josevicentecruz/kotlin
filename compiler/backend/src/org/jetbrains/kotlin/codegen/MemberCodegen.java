@@ -61,6 +61,7 @@ import static org.jetbrains.kotlin.codegen.AsmUtil.isPrimitive;
 import static org.jetbrains.kotlin.codegen.DescriptorAsmUtil.calculateInnerClassAccessFlags;
 import static org.jetbrains.kotlin.codegen.JvmCodegenUtil.isNonDefaultInterfaceMember;
 import static org.jetbrains.kotlin.codegen.inline.InlineCodegenUtilsKt.getInlineName;
+import static org.jetbrains.kotlin.descriptors.CallableMemberDescriptor.Kind.FAKE_OVERRIDE;
 import static org.jetbrains.kotlin.descriptors.CallableMemberDescriptor.Kind.SYNTHESIZED;
 import static org.jetbrains.kotlin.resolve.BindingContext.*;
 import static org.jetbrains.kotlin.resolve.DescriptorUtils.*;
@@ -925,6 +926,8 @@ public abstract class MemberCodegen<T extends KtPureElement/* TODO: & KtDeclarat
             }
 
             if (accessor.isVar() && accessor.isWithSyntheticSetterAccessor()) {
+                if (isProhibitedAccessorToPrivatePropertySetter(original)) return;
+
                 PropertySetterDescriptor setter = accessor.getSetter();
                 assert setter != null;
 
@@ -935,6 +938,19 @@ public abstract class MemberCodegen<T extends KtPureElement/* TODO: & KtDeclarat
         else {
             throw new UnsupportedOperationException();
         }
+    }
+
+    private boolean isProhibitedAccessorToPrivatePropertySetter(PropertyDescriptor original) {
+        // Property setter might be less visible than the property itself.
+        // We can generate accessor a private setter only if we are in the same class (see KT-22465).
+        if (original.getKind() != FAKE_OVERRIDE) return false;
+        // NB we don't allow private or protected interface members (so far),
+        // so a property that might require an accessor can't be declared in an interface.
+        PropertyDescriptor overriddenProperty = DescriptorUtils.unwrapFakeOverride(original);
+        PropertySetterDescriptor overriddenSetter = overriddenProperty.getSetter();
+        if (overriddenSetter == null) return false;
+        if (overriddenSetter.getVisibility() != DescriptorVisibilities.PRIVATE) return false;
+        return context.getContextDescriptor() != overriddenProperty.getContainingDeclaration();
     }
 
     protected StackValue generateMethodCallTo(

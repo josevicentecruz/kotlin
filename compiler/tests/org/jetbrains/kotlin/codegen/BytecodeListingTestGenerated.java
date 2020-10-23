@@ -25,6 +25,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
     }
 
+    @TestMetadata("accessorForProtectedPropertyWithPrivateSetter.kt")
+    public void testAccessorForProtectedPropertyWithPrivateSetter() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/accessorForProtectedPropertyWithPrivateSetter.kt");
+    }
+
     public void testAllFilesPresentInBytecodeListing() throws Exception {
         KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing"), Pattern.compile("^(.+)\\.kt$"), null, true);
     }
